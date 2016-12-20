@@ -3,6 +3,7 @@
 A very special purpose mod that allows to limit the quality level of 
 items obtained by foraging, botanizing and rummaging based on the
 corresponding skill level of the player.
+Adding the quality limit to other actions may be added on request.
 
 Requirements:
 
