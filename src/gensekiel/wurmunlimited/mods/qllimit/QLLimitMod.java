@@ -23,6 +23,7 @@ public class QLLimitMod implements
 {
 //======================================================================
 	private static Logger logger = Logger.getLogger(QLLimitMod.class.getName());
+//======================================================================
 	private static double a = 1.0;
 	private static double b = 0.0;
 	private static boolean exact = false;
@@ -31,14 +32,46 @@ public class QLLimitMod implements
 //======================================================================
 	private static boolean limitForage = true;
 	private static boolean limitBotanize = true;
+	private static boolean limitDig = true;
+	private static boolean limitFlowers = true;
+	private static boolean limitFarmHarvest = true;
+	private static boolean limitSprouts = true;
+	private static boolean limitTreeHarvest = true;
+	private static boolean limitBushHarvest = true;
+	private static boolean limitTreeChop = true;
+	private static boolean limitTreeGrass = true;
+	private static boolean limitGrass = true;
+	private static boolean limitMineSurface = true;
+	private static boolean limitMine = true;
+	private static boolean limitDisintegrate = true;
+	private static boolean limitFish = true;
+//======================================================================
+	private static String qlform;
+	private static String generic;
+	private static String reset;
+//======================================================================
+	private static void augmentMethod(CtClass ctclazz, String method, int skillid) throws Exception
+	{
+		augmentMethod(ctclazz, method, skillid, null);
+	}
+	private static void augmentMethod(CtClass ctclazz, String method, int skillid, CtClass[] params) throws Exception
+	{
+		String command = "double skl = performer.getSkills().getSkillOrLearn(" + skillid + ").knowledge;" + generic;
+		CtMethod ctm = null;
+		if(params == null) ctm = ctclazz.getDeclaredMethod(method);
+		else ctm = ctclazz.getDeclaredMethod(method, params);
+		ctm.insertBefore(command);
+		ctm.insertAfter(reset, true);
+	}
 //======================================================================
 	@Override
 	public void init()
 	{
 		try{
-			String qlform = "" + a + " * skl + " + b;
-			String generic = "ItemFactory.modSetQualityLimit(" + qlform + ");";
-			String reset = "ItemFactory.modSetQualityLimit(0.0);";
+			qlform = "" + a + " * skl + " + b;
+			generic = "ItemFactory.modSetQualityLimit(" + qlform + ");";
+			reset = "ItemFactory.modSetQualityLimit(0.0);";
+			
 			if(debug){
 				generic += "performer.getCommunicator().sendNormalServerMessage(\"QL limit set to \" + (" + qlform + ") + \".\");";
 				reset += "performer.getCommunicator().sendNormalServerMessage(\"QL limit reset.\");";
@@ -65,31 +98,76 @@ public class QLLimitMod implements
 			ctItemFactory.addMethod(ctGetQualityLimit);
 	
 			CtClass ctString = pool.get("java.lang.String");
+			
 			CtMethod ctCreateItem = ctItemFactory.getDeclaredMethod("createItem", new CtClass[]{
-				CtPrimitiveType.intType, CtPrimitiveType.floatType, CtPrimitiveType.byteType, CtPrimitiveType.byteType, ctString
+				CtPrimitiveType.intType, CtPrimitiveType.floatType, CtPrimitiveType.byteType, CtPrimitiveType.byteType, 
+				CtPrimitiveType.longType, ctString
 			});
 			ctCreateItem.insertBefore(qllimit);
-			
+
+			CtMethod ctCreateItem2 = ctItemFactory.getDeclaredMethod("createItem", new CtClass[]{
+				CtPrimitiveType.intType, CtPrimitiveType.floatType, CtPrimitiveType.floatType, CtPrimitiveType.floatType, 
+				CtPrimitiveType.floatType, CtPrimitiveType.booleanType, CtPrimitiveType.byteType, CtPrimitiveType.byteType, 
+				CtPrimitiveType.longType, ctString, CtPrimitiveType.byteType
+			});
+			ctCreateItem2.insertBefore(qllimit);
+
 			CtClass ctTileBehaviour = pool.get("com.wurmonline.server.behaviours.TileBehaviour");
 
 			if(limitForage){
-				String forage = "double skl = performer.getSkills().getSkillOrLearn(10071).knowledge;" + generic;
-				
-				CtMethod ctForage = ctTileBehaviour.getDeclaredMethod("forage");
-				ctForage.insertBefore(forage);
-				ctForage.insertAfter(reset, true);
+				augmentMethod(ctTileBehaviour, "forage",    10071);
+				augmentMethod(ctTileBehaviour, "forageV11", 10071);
+			}
+			if(limitBotanize) augmentMethod(ctTileBehaviour, "botanizeV11", 10072);
+			
+			CtClass ctTerraforming = pool.get("com.wurmonline.server.behaviours.Terraforming");
+			
+			if(limitDig)         augmentMethod(ctTerraforming, "dig",               1009);
+			if(limitFlowers)     augmentMethod(ctTerraforming, "pickFlower",       10045);
+			if(limitFarmHarvest) augmentMethod(ctTerraforming, "harvest",          10049);
+			if(limitSprouts)     augmentMethod(ctTerraforming, "pickSprout",       10048);
+			if(limitTreeHarvest) augmentMethod(ctTerraforming, "harvestTree",      10048);
+			if(limitBushHarvest) augmentMethod(ctTerraforming, "harvestBush",      10048);
+			if(limitTreeChop)    augmentMethod(ctTerraforming, "handleChopAction",  1007);
 
-				CtMethod ctForageV11 = ctTileBehaviour.getDeclaredMethod("forageV11");
-				ctForageV11.insertBefore(forage);
-				ctForageV11.insertAfter(reset, true);
+			CtClass ctTileTreeBehaviour = pool.get("com.wurmonline.server.behaviours.TileTreeBehaviour");
+			
+			if(limitTreeGrass) augmentMethod(ctTileTreeBehaviour, "cutGrass", 10045);
+
+			CtClass ctTileGrassBehaviour = pool.get("com.wurmonline.server.behaviours.TileGrassBehaviour");
+			
+			if(limitGrass) augmentMethod(ctTileGrassBehaviour, "cutGrass", 10045);
+
+			CtClass ctTileRockBehaviour = pool.get("com.wurmonline.server.behaviours.TileRockBehaviour");
+			CtClass ctAction = pool.get("com.wurmonline.server.behaviours.Action");
+			CtClass ctCreature = pool.get("com.wurmonline.server.creatures.Creature");
+			CtClass ctItem = pool.get("com.wurmonline.server.items.Item");
+
+			if(limitMineSurface) augmentMethod(ctTileRockBehaviour, "action", 1008, new CtClass[]{
+				ctAction, ctCreature, ctItem, CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.booleanType, 
+				CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.shortType, CtPrimitiveType.floatType
+			});
+
+			CtClass ctCaveWallBehaviour = pool.get("com.wurmonline.server.behaviours.CaveWallBehaviour");
+			CtClass ctCaveTileBehaviour = pool.get("com.wurmonline.server.behaviours.CaveTileBehaviour");
+
+			if(limitMine){
+				augmentMethod(ctCaveWallBehaviour, "action", 1008, new CtClass[]{
+					ctAction, ctCreature, ctItem, CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.booleanType,
+					CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.shortType, CtPrimitiveType.floatType
+				});
+				augmentMethod(ctCaveTileBehaviour, "handle_MINE", 1008);
+				augmentMethod(ctCaveTileBehaviour, "flatten", 1008);
 			}
-	
-			if(limitBotanize){
-				String botanize = "double skl = performer.getSkills().getSkillOrLearn(10072).knowledge;" + generic;
-				CtMethod ctBotanizeV11 = ctTileBehaviour.getDeclaredMethod("botanizeV11");
-				ctBotanizeV11.insertBefore(botanize);
-				ctBotanizeV11.insertAfter(reset, true);
-			}
+
+			CtClass ctDisintegrate = pool.get("com.wurmonline.server.spells.Disintegrate");
+			
+			if(limitDisintegrate) augmentMethod(ctDisintegrate, "doEffect", 1008);
+			
+			CtClass ctFish = pool.get("com.wurmonline.server.behaviours.Fish");
+			
+			if(limitFish) augmentMethod(ctFish, "fish", 10033);
+			
 		}catch(Exception e){
 			logger.log(Level.WARNING, "Setup failed, QL limit mod will not work. Exception: " + e);
 		}
@@ -108,6 +186,19 @@ public class QLLimitMod implements
 		debug = getOption("debug", debug, properties);
 		limitForage = getOption("limitForage", limitForage, properties);
 		limitBotanize = getOption("limitBotanize", limitBotanize, properties);
+		limitDig = getOption("limitDig", limitDig, properties);
+		limitFlowers = getOption("limitFlowers", limitFlowers, properties);
+		limitFarmHarvest = getOption("limitFarmHarvest", limitFarmHarvest, properties);
+		limitSprouts = getOption("limitSprouts", limitSprouts, properties);
+		limitTreeHarvest = getOption("limitTreeHarvest", limitTreeHarvest, properties);
+		limitBushHarvest = getOption("limitBushHarvest", limitBushHarvest, properties);
+		limitTreeChop = getOption("limitTreeChop", limitTreeChop, properties);
+		limitTreeGrass = getOption("limitTreeGrass", limitTreeGrass, properties);
+		limitGrass = getOption("limitGrass", limitGrass, properties);
+		limitMineSurface = getOption("limitMineSurface", limitMineSurface, properties);
+		limitMine = getOption("limitMine", limitMine, properties);
+		limitDisintegrate = getOption("limitDisintegrate", limitDisintegrate, properties);
+		limitFish = getOption("limitFish", limitFish, properties);
 	}
 //======================================================================
 }
