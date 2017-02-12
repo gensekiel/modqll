@@ -1,9 +1,27 @@
 # Quality Level Limit Mod for Wurm Unlimited
 
 A very special purpose mod that allows to limit the quality level of 
-items obtained by foraging, botanizing and rummaging based on the
-corresponding skill level of the player.
+items obtained by several actions based on the corresponding skill 
+level of the player.
 Adding the quality limit to other actions may be added on request.
+
+Actions for which QL can be limited (can be disabled separately in
+the properties file):
+
+* Foraging & rummaging
+* Botanizing
+* Digging
+* Picking flowers
+* Harvesting farms
+* Picking sprouts
+* Harvesting trees
+* Harvesting bushes
+* Chopping trees
+* Cutting grass
+* Cutting grass around trees
+* Surface mining (including gems, etc.)
+* Mining (including gems, etc.)
+* Fishing
 
 Requirements:
 
