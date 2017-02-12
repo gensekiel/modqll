@@ -27,15 +27,22 @@ public class QLLimitMod implements
 	private static double b = 0.0;
 	private static boolean exact = false;
 	private static double hardlimit = 99.0;
+	private static boolean debug = false;
+//======================================================================
+	private static boolean limitForage = true;
+	private static boolean limitBotanize = true;
 //======================================================================
 	@Override
 	public void init()
 	{
 		try{
-			String generic = "ItemFactory.modSetQualityLimit(" + a + " * skl + " + b + ");";
-			String forage = "double skl = performer.getSkills().getSkillOrLearn(10071).knowledge;" + generic;
-			String botanize = "double skl = performer.getSkills().getSkillOrLearn(10072).knowledge;" + generic;
+			String qlform = "" + a + " * skl + " + b;
+			String generic = "ItemFactory.modSetQualityLimit(" + qlform + ");";
 			String reset = "ItemFactory.modSetQualityLimit(0.0);";
+			if(debug){
+				generic += "performer.getCommunicator().sendNormalServerMessage(\"QL limit set to \" + (" + qlform + ") + \".\");";
+				reset += "performer.getCommunicator().sendNormalServerMessage(\"QL limit reset.\");";
+			}
 			
 			String qllimit = null;
 			if(exact) qllimit = "if(modQualityLimit > 0.0) qualityLevel = modQualityLimit;";
@@ -65,17 +72,24 @@ public class QLLimitMod implements
 			
 			CtClass ctTileBehaviour = pool.get("com.wurmonline.server.behaviours.TileBehaviour");
 
-			CtMethod ctForage = ctTileBehaviour.getDeclaredMethod("forage");
-			ctForage.insertBefore(forage);
-			ctForage.insertAfter(reset, true);
-	
-			CtMethod ctForageV11 = ctTileBehaviour.getDeclaredMethod("forageV11");
-			ctForageV11.insertBefore(forage);
-			ctForageV11.insertAfter(reset, true);
+			if(limitForage){
+				String forage = "double skl = performer.getSkills().getSkillOrLearn(10071).knowledge;" + generic;
+				
+				CtMethod ctForage = ctTileBehaviour.getDeclaredMethod("forage");
+				ctForage.insertBefore(forage);
+				ctForage.insertAfter(reset, true);
 
-			CtMethod ctBotanizeV11 = ctTileBehaviour.getDeclaredMethod("botanizeV11");
-			ctBotanizeV11.insertBefore(botanize);
-			ctBotanizeV11.insertAfter(reset, true);
+				CtMethod ctForageV11 = ctTileBehaviour.getDeclaredMethod("forageV11");
+				ctForageV11.insertBefore(forage);
+				ctForageV11.insertAfter(reset, true);
+			}
+	
+			if(limitBotanize){
+				String botanize = "double skl = performer.getSkills().getSkillOrLearn(10072).knowledge;" + generic;
+				CtMethod ctBotanizeV11 = ctTileBehaviour.getDeclaredMethod("botanizeV11");
+				ctBotanizeV11.insertBefore(botanize);
+				ctBotanizeV11.insertAfter(reset, true);
+			}
 		}catch(Exception e){
 			logger.log(Level.WARNING, "Setup failed, QL limit mod will not work. Exception: " + e);
 		}
@@ -91,6 +105,9 @@ public class QLLimitMod implements
 		b = getOption("b", b, properties);
 		exact = getOption("exact", exact, properties);
 		hardlimit = getOption("hardlimit", hardlimit, properties);
+		debug = getOption("debug", debug, properties);
+		limitForage = getOption("limitForage", limitForage, properties);
+		limitBotanize = getOption("limitBotanize", limitBotanize, properties);
 	}
 //======================================================================
 }
