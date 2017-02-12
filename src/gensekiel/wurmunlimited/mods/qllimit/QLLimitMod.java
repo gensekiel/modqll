@@ -43,7 +43,7 @@ public class QLLimitMod implements
 	private static boolean limitGrass = true;
 	private static boolean limitMineSurface = true;
 	private static boolean limitMine = true;
-	private static boolean limitDisintegrate = true;
+//	private static boolean limitDisintegrate = true;
 	private static boolean limitFish = true;
 //======================================================================
 	private static String qlform;
@@ -160,9 +160,9 @@ public class QLLimitMod implements
 				augmentMethod(ctCaveTileBehaviour, "flatten", 1008);
 			}
 
-			CtClass ctDisintegrate = pool.get("com.wurmonline.server.spells.Disintegrate");
-			
-			if(limitDisintegrate) augmentMethod(ctDisintegrate, "doEffect", 1008);
+//			CtClass ctDisintegrate = pool.get("com.wurmonline.server.spells.Disintegrate");
+//			
+//			if(limitDisintegrate) augmentMethod(ctDisintegrate, "doEffect", 1008);
 			
 			CtClass ctFish = pool.get("com.wurmonline.server.behaviours.Fish");
 			
@@ -197,7 +197,7 @@ public class QLLimitMod implements
 		limitGrass = getOption("limitGrass", limitGrass, properties);
 		limitMineSurface = getOption("limitMineSurface", limitMineSurface, properties);
 		limitMine = getOption("limitMine", limitMine, properties);
-		limitDisintegrate = getOption("limitDisintegrate", limitDisintegrate, properties);
+//		limitDisintegrate = getOption("limitDisintegrate", limitDisintegrate, properties);
 		limitFish = getOption("limitFish", limitFish, properties);
 	}
 //======================================================================
