@@ -29,6 +29,7 @@ public class QLLimitMod implements
 	private static boolean exact = false;
 	private static double hardlimit = 99.0;
 	private static boolean debug = false;
+	private static boolean nesting = true;
 //======================================================================
 	private static boolean limitForage = true;
 	private static boolean limitBotanize = true;
@@ -70,13 +71,15 @@ public class QLLimitMod implements
 		try{
 			qlform = "" + a + " * skl + " + b;
 			generic = "ItemFactory.modSetQualityLimit(" + qlform + ");";
-			reset = "ItemFactory.modSetQualityLimit(0.0);";
-			
+			reset = "ItemFactory.modResetQualityLimit();";
+			String qlset0 = "ItemFactory.modSetQualityLimit(0.0);";
+
 			if(debug){
-				generic += "performer.getCommunicator().sendNormalServerMessage(\"QL limit set to \" + (" + qlform + ") + \".\");";
-				reset += "performer.getCommunicator().sendNormalServerMessage(\"QL limit reset.\");";
+				generic += "performer.getCommunicator().sendNormalServerMessage(\"QL limit set to \" + ItemFactory.modGetQualityLimit() + \".\");";
+				reset += "performer.getCommunicator().sendNormalServerMessage(\"QL limit reset to \" + ItemFactory.modGetQualityLimit() + \".\");";
+				qlset0 += "performer.getCommunicator().sendNormalServerMessage(\"QL limit set to \" + ItemFactory.modGetQualityLimit() + \".\");";
 			}
-			
+
 			String qllimit = null;
 			if(exact) qllimit = "if(modQualityLimit > 0.0) qualityLevel = modQualityLimit;";
 			else qllimit = "if(modQualityLimit > 0.0) qualityLevel = (modQualityLimit < qualityLevel) ? modQualityLimit : qualityLevel;";
@@ -87,18 +90,39 @@ public class QLLimitMod implements
 			pool.importPackage("com.wurmonline.server.items.ItemFactory");
 
 			CtClass ctItemFactory = pool.get("com.wurmonline.server.items.ItemFactory");
+
 			CtField ctQualityLimit = new CtField(CtClass.doubleType, "modQualityLimit", ctItemFactory);
 			ctQualityLimit.setModifiers(Modifier.STATIC);
-			ctItemFactory.addField(ctQualityLimit);
-	
-			CtMethod ctSetQualityLimit = CtNewMethod.make("public static void modSetQualityLimit(double d){ modQualityLimit = d; }", ctItemFactory);
-			ctItemFactory.addMethod(ctSetQualityLimit);
-	
-			CtMethod ctGetQualityLimit = CtNewMethod.make("public static double modGetQualityLimit(){ return modQualityLimit; }", ctItemFactory);
-			ctItemFactory.addMethod(ctGetQualityLimit);
-	
+			ctItemFactory.addField(ctQualityLimit, "0.0");
+
+			if(nesting){
+				CtClass ctStack = pool.get("java.util.Stack");
+				
+				CtField ctQLStack = new CtField(ctStack, "modQLStack", ctItemFactory);
+				ctQLStack.setModifiers(Modifier.STATIC);
+				ctItemFactory.addField(ctQLStack, CtField.Initializer.byNew(ctStack));
+
+				CtMethod ctSetQualityLimit = CtNewMethod.make("public static void modSetQualityLimit(double d){ modQLStack.push(new Double(modQualityLimit)); modQualityLimit = d; }", ctItemFactory);
+				ctItemFactory.addMethod(ctSetQualityLimit);
+
+				CtMethod ctResetQualityLimit = CtNewMethod.make("public static void modResetQualityLimit(){ try{ modQualityLimit = ((Double)modQLStack.pop()).doubleValue(); }catch(Exception e){ modQualityLimit = 0.0; } }", ctItemFactory);
+				ctItemFactory.addMethod(ctResetQualityLimit);
+
+				CtMethod ctGetQualityLimit = CtNewMethod.make("public static double modGetQualityLimit(){ return modQualityLimit; }", ctItemFactory);
+				ctItemFactory.addMethod(ctGetQualityLimit);
+			}else{
+				CtMethod ctSetQualityLimit = CtNewMethod.make("public static void modSetQualityLimit(double d){ modQualityLimit = d; }", ctItemFactory);
+				ctItemFactory.addMethod(ctSetQualityLimit);
+
+				CtMethod ctResetQualityLimit = CtNewMethod.make("public static void modResetQualityLimit(){ modQualityLimit = 0.0; }", ctItemFactory);
+				ctItemFactory.addMethod(ctResetQualityLimit);
+
+				CtMethod ctGetQualityLimit = CtNewMethod.make("public static double modGetQualityLimit(){ return modQualityLimit; }", ctItemFactory);
+				ctItemFactory.addMethod(ctGetQualityLimit);
+			}
+
 			CtClass ctString = pool.get("java.lang.String");
-			
+
 			CtMethod ctCreateItem = ctItemFactory.getDeclaredMethod("createItem", new CtClass[]{
 				CtPrimitiveType.intType, CtPrimitiveType.floatType, CtPrimitiveType.byteType, CtPrimitiveType.byteType, 
 				CtPrimitiveType.longType, ctString
@@ -119,9 +143,9 @@ public class QLLimitMod implements
 				augmentMethod(ctTileBehaviour, "forageV11", 10071);
 			}
 			if(limitBotanize) augmentMethod(ctTileBehaviour, "botanizeV11", 10072);
-			
+
 			CtClass ctTerraforming = pool.get("com.wurmonline.server.behaviours.Terraforming");
-			
+
 			if(limitDig)         augmentMethod(ctTerraforming, "dig",               1009);
 			if(limitFlowers)     augmentMethod(ctTerraforming, "pickFlower",       10045);
 			if(limitFarmHarvest) augmentMethod(ctTerraforming, "harvest",          10049);
@@ -131,11 +155,11 @@ public class QLLimitMod implements
 			if(limitTreeChop)    augmentMethod(ctTerraforming, "handleChopAction",  1007);
 
 			CtClass ctTileTreeBehaviour = pool.get("com.wurmonline.server.behaviours.TileTreeBehaviour");
-			
+
 			if(limitTreeGrass) augmentMethod(ctTileTreeBehaviour, "cutGrass", 10045);
 
 			CtClass ctTileGrassBehaviour = pool.get("com.wurmonline.server.behaviours.TileGrassBehaviour");
-			
+
 			if(limitGrass) augmentMethod(ctTileGrassBehaviour, "cutGrass", 10045);
 
 			CtClass ctTileRockBehaviour = pool.get("com.wurmonline.server.behaviours.TileRockBehaviour");
@@ -163,11 +187,20 @@ public class QLLimitMod implements
 //			CtClass ctDisintegrate = pool.get("com.wurmonline.server.spells.Disintegrate");
 //			
 //			if(limitDisintegrate) augmentMethod(ctDisintegrate, "doEffect", 1008);
-			
+
 			CtClass ctFish = pool.get("com.wurmonline.server.behaviours.Fish");
-			
+
 			if(limitFish) augmentMethod(ctFish, "fish", 10033);
-			
+
+			if(nesting){
+				// Protect some methods
+				if(limitMine || limitMineSurface){
+					CtMethod ctm = ctTileRockBehaviour.getDeclaredMethod("maybeCreateSource");
+					ctm.insertBefore(qlset0);
+					ctm.insertAfter(reset, true);
+				}
+			}
+
 		}catch(Exception e){
 			logger.log(Level.WARNING, "Setup failed, QL limit mod will not work. Exception: " + e);
 		}
@@ -184,6 +217,7 @@ public class QLLimitMod implements
 		exact = getOption("exact", exact, properties);
 		hardlimit = getOption("hardlimit", hardlimit, properties);
 		debug = getOption("debug", debug, properties);
+		nesting = getOption("nesting", nesting, properties);
 		limitForage = getOption("limitForage", limitForage, properties);
 		limitBotanize = getOption("limitBotanize", limitBotanize, properties);
 		limitDig = getOption("limitDig", limitDig, properties);
