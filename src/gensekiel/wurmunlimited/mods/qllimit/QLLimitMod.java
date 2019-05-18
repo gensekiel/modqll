@@ -57,7 +57,7 @@ public class QLLimitMod implements
 	}
 	private static void augmentMethod(CtClass ctclazz, String method, int skillid, CtClass[] params) throws Exception
 	{
-		String command = "double skl = performer.getSkills().getSkillOrLearn(" + skillid + ").knowledge;" + generic;
+		String command = "double skl = performer.getSkills().getSkillOrLearn(" + skillid + ").getKnowledge();" + generic;
 		CtMethod ctm = null;
 		if(params == null) ctm = ctclazz.getDeclaredMethod(method);
 		else ctm = ctclazz.getDeclaredMethod(method, params);
@@ -85,7 +85,7 @@ public class QLLimitMod implements
 			else qllimit = "if(modQualityLimit > 0.0) qualityLevel = (modQualityLimit < qualityLevel) ? modQualityLimit : qualityLevel;";
 			qllimit += "qualityLevel = (qualityLevel > " + hardlimit + ") ? " + hardlimit + " : qualityLevel;";
 			qllimit += "qualityLevel = (qualityLevel < 1.0) ? 1.0 : qualityLevel;";
-			
+
 			ClassPool pool = ClassPool.getDefault();
 			pool.importPackage("com.wurmonline.server.items.ItemFactory");
 
@@ -97,7 +97,7 @@ public class QLLimitMod implements
 
 			if(nesting){
 				CtClass ctStack = pool.get("java.util.Stack");
-				
+
 				CtField ctQLStack = new CtField(ctStack, "modQLStack", ctItemFactory);
 				ctQLStack.setModifiers(Modifier.STATIC);
 				ctItemFactory.addField(ctQLStack, CtField.Initializer.byNew(ctStack));
@@ -124,14 +124,14 @@ public class QLLimitMod implements
 			CtClass ctString = pool.get("java.lang.String");
 
 			CtMethod ctCreateItem = ctItemFactory.getDeclaredMethod("createItem", new CtClass[]{
-				CtPrimitiveType.intType, CtPrimitiveType.floatType, CtPrimitiveType.byteType, CtPrimitiveType.byteType, 
+				CtPrimitiveType.intType, CtPrimitiveType.floatType, CtPrimitiveType.byteType, CtPrimitiveType.byteType,
 				CtPrimitiveType.longType, ctString
 			});
 			ctCreateItem.insertBefore(qllimit);
 
 			CtMethod ctCreateItem2 = ctItemFactory.getDeclaredMethod("createItem", new CtClass[]{
-				CtPrimitiveType.intType, CtPrimitiveType.floatType, CtPrimitiveType.floatType, CtPrimitiveType.floatType, 
-				CtPrimitiveType.floatType, CtPrimitiveType.booleanType, CtPrimitiveType.byteType, CtPrimitiveType.byteType, 
+				CtPrimitiveType.intType, CtPrimitiveType.floatType, CtPrimitiveType.floatType, CtPrimitiveType.floatType,
+				CtPrimitiveType.floatType, CtPrimitiveType.booleanType, CtPrimitiveType.byteType, CtPrimitiveType.byteType,
 				CtPrimitiveType.longType, ctString, CtPrimitiveType.byteType
 			});
 			ctCreateItem2.insertBefore(qllimit);
@@ -168,7 +168,7 @@ public class QLLimitMod implements
 			CtClass ctItem = pool.get("com.wurmonline.server.items.Item");
 
 			if(limitMineSurface) augmentMethod(ctTileRockBehaviour, "action", 1008, new CtClass[]{
-				ctAction, ctCreature, ctItem, CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.booleanType, 
+				ctAction, ctCreature, ctItem, CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.booleanType,
 				CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.shortType, CtPrimitiveType.floatType
 			});
 
@@ -178,14 +178,14 @@ public class QLLimitMod implements
 			if(limitMine){
 				augmentMethod(ctCaveWallBehaviour, "action", 1008, new CtClass[]{
 					ctAction, ctCreature, ctItem, CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.booleanType,
-					CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.shortType, CtPrimitiveType.floatType
+					CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.intType, CtPrimitiveType.shortType, CtPrimitiveType.floatType
 				});
 				augmentMethod(ctCaveTileBehaviour, "handle_MINE", 1008);
 				augmentMethod(ctCaveTileBehaviour, "flatten", 1008);
 			}
 
 //			CtClass ctDisintegrate = pool.get("com.wurmonline.server.spells.Disintegrate");
-//			
+//
 //			if(limitDisintegrate) augmentMethod(ctDisintegrate, "doEffect", 1008);
 
 			CtClass ctFish = pool.get("com.wurmonline.server.behaviours.Fish");
